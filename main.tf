@@ -62,3 +62,24 @@ resource "aws_iam_role_policy_attachment" "dynamodb_reading_permit" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess"
 }
 
+# Lambda
+data "archive_file" "lambda_function_file" {
+  type        = "zip"
+  source_dir  = "./src/"
+  output_path = "./upload/lambda_function.zip"
+}
+
+resource "aws_lambda_function" "get_gang_info" {
+  filename         = data.archive_file.lambda_function_file.output_path
+  function_name    = "get_gang_info"
+  role             = aws_iam_role.dynamodb_read_only.arn
+  handler          = "lambda_function_file.lambda_function"
+  source_code_hash = data.archive_file.lambda_function_file.output_base64sha256
+  runtime          = "python3.12"
+  timeout          = 29
+  environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.gang_of_straw.name
+    }
+  }
+}
