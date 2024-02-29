@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
+    }
   }
 
   backend "local" {
@@ -13,6 +17,7 @@ terraform {
   }
 }
 
+# DynamoDB
 resource "aws_dynamodb_table" "gang_of_straw" {
   name           = "gang_of_straw"
   billing_mode   = "PROVISIONED"
@@ -30,6 +35,7 @@ resource "aws_dynamodb_table" "gang_of_straw" {
   }
 }
 
+# IAM
 resource "aws_iam_role" "dynamodb_read_only" {
   name = "dynamodb_read_only"
   assume_role_policy = jsonencode({
