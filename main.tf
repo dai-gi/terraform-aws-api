@@ -73,7 +73,7 @@ resource "aws_lambda_function" "get_gang_info" {
   filename         = data.archive_file.lambda_function_file.output_path
   function_name    = "get_gang_info"
   role             = aws_iam_role.dynamodb_read_only.arn
-  handler          = "lambda_function_file.lambda_function"
+  handler          = "lambda_function.lambda_handler"
   source_code_hash = data.archive_file.lambda_function_file.output_base64sha256
   runtime          = "python3.12"
   timeout          = 29
@@ -82,4 +82,50 @@ resource "aws_lambda_function" "get_gang_info" {
       TABLE_NAME = aws_dynamodb_table.gang_of_straw.name
     }
   }
+}
+
+resource "aws_lambda_permission" "tr_lambda_permit" {
+  statement_id  = "get_gang_info_api"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_gang_info.arn
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.get_gang_info_api.execution_arn}/*/GET/gang"
+}
+
+# API Gateway
+resource "aws_api_gateway_rest_api" "get_gang_info_api" {
+  name = "get_gang_info_api"
+}
+
+resource "aws_api_gateway_resource" "gang_api_resource" {
+  rest_api_id = aws_api_gateway_rest_api.get_gang_info_api.id
+  parent_id   = aws_api_gateway_rest_api.get_gang_info_api.root_resource_id
+  path_part   = "gang"
+}
+
+resource "aws_api_gateway_method" "gang_get_method" {
+  authorization = "NONE"
+  http_method   = "GET"
+  resource_id   = aws_api_gateway_resource.gang_api_resource.id
+  rest_api_id   = aws_api_gateway_rest_api.get_gang_info_api.id
+}
+
+resource "aws_api_gateway_integration" "get_gang_lambda_integration" {
+  http_method             = aws_api_gateway_method.gang_get_method.http_method
+  resource_id             = aws_api_gateway_resource.gang_api_resource.id
+  rest_api_id             = aws_api_gateway_rest_api.get_gang_info_api.id
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.get_gang_info.invoke_arn
+}
+
+resource "aws_api_gateway_deployment" "tr_api" {
+  depends_on = [
+    aws_api_gateway_integration.get_gang_lambda_integration
+  ]
+  rest_api_id = aws_api_gateway_rest_api.get_gang_info_api.id
+  stage_name  = "dev"
+  # triggers = {
+  #   redeployment = filebase64("main.tf")
+  # }
 }

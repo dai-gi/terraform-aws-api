@@ -1,4 +1,5 @@
 import boto3
+import json
 import logging
 from botocore.exceptions import ClientError
 
@@ -58,5 +59,5 @@ def lambda_handler(event, context):
     else:
         return {
             'statusCode': 200,
-            'body': item
+            'body': json.dumps(item)
         }
